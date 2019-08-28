@@ -7,7 +7,7 @@ namespace Ubiquity\db\providers;
  * This class is part of Ubiquity
  *
  * @author jcheron <myaddressmail@gmail.com>
- * @version 1.0.0
+ * @version 1.0.1
  *
  */
 abstract class AbstractDbWrapper {
@@ -33,12 +33,6 @@ abstract class AbstractDbWrapper {
 	abstract public function getStatement(string $sql);
 
 	abstract public function connect(string $dbType, $dbName, $serverName, string $port, string $user, string $password, array $options);
-
-	abstract public function pool();
-
-	abstract public function freePool($db);
-
-	abstract public function setPool($pool);
 
 	abstract public function getDSN(string $serverName, string $port, string $dbName, string $dbType = 'mysql');
 

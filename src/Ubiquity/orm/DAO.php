@@ -18,13 +18,14 @@ use Ubiquity\orm\parser\Reflexion;
 use Ubiquity\orm\traits\DAOTransactionsTrait;
 use Ubiquity\controllers\Startup;
 use Ubiquity\cache\CacheManager;
+use Ubiquity\db\providers\swoole\DatabasePool;
 
 /**
  * Gateway class between database and object model.
  * This class is part of Ubiquity
  *
  * @author jcheron <myaddressmail@gmail.com>
- * @version 1.2.1
+ * @version 1.2.2
  *
  */
 class DAO {
@@ -32,22 +33,23 @@ class DAO {
 
 	/**
 	 *
-	 * @var Database
+	 * @var DatabasePool[]
 	 */
-	public static $db;
+	public static $pools = [ ];
 	public static $useTransformers = false;
 	public static $transformerOp = 'transform';
 	private static $conditionParsers = [ ];
-	private static $pool;
 	protected static $modelsDatabase = [ ];
 
 	protected static function getDb($model) {
 		return self::getDatabase ( self::$modelsDatabase [$model] ?? 'default');
 	}
 
-	public static function initPooling(&$config, $offset = null) {
-		$db = $offset ? ($config ['database'] [$offset] ?? ($config ['database'] ?? [ ])) : ($config ['database'] ['default'] ?? $config ['database']);
-		self::$pool = new \Ubiquity\db\providers\swoole\ConnectionPool ( $db ['type'], $db ['serverName'] ?? '127.0.0.1', $db ['port'] ?? 3306, $db ['user'] ?? 'root', $db ['password'] ?? '', $db ['dbName'] );
+	public static function getPool(&$config, ?string $offset = null) {
+		if (! isset ( self::$pools [$offset ?? 'default'] )) {
+			self::$pools [$offset ?? 'default'] = new DatabasePool ( $config, $offset );
+		}
+		return self::$pools [$offset ?? 'default'];
 	}
 
 	/**
@@ -263,39 +265,10 @@ class DAO {
 	}
 
 	/**
-	 * Establishes the connection to the database using the past parameters
-	 *
-	 * @param string $offset
-	 * @param string $wrapper
-	 * @param string $dbType
-	 * @param string $dbName
-	 * @param string $serverName
-	 * @param string $port
-	 * @param string $user
-	 * @param string $password
-	 * @param array $options
-	 * @param boolean $cache
-	 */
-	public static function connect($offset, $wrapper, $dbType, $dbName, $serverName = '127.0.0.1', $port = '3306', $user = 'root', $password = '', $options = [], $cache = false) {
-		self::$db [$offset] = new Database ( $wrapper, $dbType, $dbName, $serverName, $port, $user, $password, $options, $cache, self::$pool );
-		try {
-			self::$db [$offset]->connect ();
-		} catch ( \Exception $e ) {
-			Logger::error ( "DAO", $e->getMessage () );
-			throw new DAOException ( $e->getMessage (), $e->getCode (), $e->getPrevious () );
-		}
-	}
-
-	/**
 	 * Establishes the connection to the database using the $config array
-	 *
-	 * @param array $config the config array (Startup::getConfig())
 	 */
-	public static function startDatabase(&$config, $offset = null, $dbOffset = null) {
-		$db = $offset ? ($config ['database'] [$offset] ?? ($config ['database'] ?? [ ])) : ($config ['database'] ['default'] ?? $config ['database']);
-		if ($db ['dbName'] !== '') {
-			self::connect ( $dbOffset ?? 'default', $db ['wrapper'] ?? \Ubiquity\db\providers\pdo\PDOWrapper::class, $db ['type'], $db ['dbName'], $db ['serverName'] ?? '127.0.0.1', $db ['port'] ?? 3306, $db ['user'] ?? 'root', $db ['password'] ?? '', $db ['options'] ?? [ ], $db ['cache'] ?? false);
-		}
+	public static function startDatabase($offset = null) {
+		self::getDatabase ( $offset );
 	}
 
 	public static function getDbOffset(&$config, $offset = null) {
@@ -308,7 +281,7 @@ class DAO {
 	 * @return boolean
 	 */
 	public static function isConnected($offset = 'default') {
-		$db = self::$db [$offset] ?? false;
+		$db = self::getDatabase ( $offset );
 		return $db && ($db instanceof Database) && $db->isConnected ();
 	}
 
@@ -325,7 +298,7 @@ class DAO {
 	 * Closes the active pdo connection to the database
 	 */
 	public static function closeDb($offset = 'default') {
-		$db = self::$db [$offset] ?? false;
+		$db = self::getDatabase ( $offset );
 		if ($db !== false) {
 			$db->close ();
 		}
@@ -357,12 +330,9 @@ class DAO {
 	 * @return \Ubiquity\db\Database
 	 */
 	public static function getDatabase($offset = 'default') {
-		$dbOffset = self::$pool ? self::$pool->getUid ( $offset ) : $offset;
-		if (! isset ( self::$db [$dbOffset] )) {
-			self::startDatabase ( Startup::$config, $offset, $dbOffset );
-		}
-		SqlUtils::$quote = self::$db [$dbOffset]->quote;
-		return self::$db [$dbOffset];
+		$db = self::getPool ( Startup::$config, $offset )->get ();
+		SqlUtils::$quote = $db->quote;
+		return $db;
 	}
 
 	public static function getDatabases() {
@@ -408,14 +378,11 @@ class DAO {
 	 * @return mixed
 	 */
 	public static function pool($offset = 'default') {
-		$dbOffset = self::$pool->getUid ( $offset );
-		if (! isset ( self::$db [$dbOffset] )) {
-			self::startDatabase ( Startup::$config, $offset, $dbOffset );
-		}
-		return self::$db [$dbOffset]->pool ();
+		return self::getDatabase ( $offset );
 	}
 
-	public static function freePool($db) {
-		self::$pool->put ( $db );
+	public static function freePool($db, $offset = 'default') {
+		$pool = self::getPool ( Startup::$config, $offset );
+		$pool->put ( $db );
 	}
 }
