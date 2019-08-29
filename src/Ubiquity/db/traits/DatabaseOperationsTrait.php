@@ -25,10 +25,6 @@ trait DatabaseOperationsTrait {
 		return $this->wrapperObject->getDbInstance ();
 	}
 
-	public function _connect() {
-		$this->wrapperObject->connect ( $this->dbType, $this->dbName, $this->serverName, $this->port, $this->user, $this->password, $this->options );
-	}
-
 	/**
 	 * Executes an SQL statement, returning a result set as a statement object
 	 *

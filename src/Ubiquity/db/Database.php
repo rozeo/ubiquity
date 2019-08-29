@@ -52,7 +52,7 @@ class Database {
 	 * @param array $options
 	 * @param boolean|string $cache
 	 */
-	public function __construct($dbWrapperClass, $dbType, $dbName, $serverName = "127.0.0.1", $port = "3306", $user = "root", $password = "", $options = [], $cache = false, $pool = null) {
+	public function __construct($dbWrapperClass, $dbType, $dbName, $serverName = "127.0.0.1", $port = "3306", $user = "root", $password = "", $options = [], $cache = false) {
 		$this->setDbWrapperClass ( $dbWrapperClass );
 		$this->dbType = $dbType;
 		$this->dbName = $dbName;
@@ -72,9 +72,6 @@ class Database {
 				}
 			}
 		}
-		if ($pool) {
-			$this->wrapperObject->setPool ( $pool );
-		}
 	}
 
 	private function setDbWrapperClass($dbWrapperClass) {
@@ -90,7 +87,7 @@ class Database {
 	 */
 	public function connect() {
 		try {
-			$this->_connect ();
+			$this->wrapperObject->connect ( $this->dbType, $this->dbName, $this->serverName, $this->port, $this->user, $this->password, $this->options );
 			return true;
 		} catch ( \Exception $e ) {
 			throw new DBException ( $e->getMessage (), $e->getCode (), $e->getPrevious () );

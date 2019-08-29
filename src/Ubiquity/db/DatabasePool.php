@@ -19,6 +19,13 @@ class DatabasePool {
 	}
 
 	public function put($db) {
+		$offset = $this->offset;
+		if (\class_exists ( '\\Swoole\\Coroutine' )) {
+			$offset .= \Swoole\Coroutine::getuid () ?? '';
+		}
+		if (isset ( $this->dbs [$offset] )) {
+			unset ( $this->dbs [$offset] );
+		}
 		$this->pool->enqueue ( $db );
 	}
 
@@ -33,10 +40,10 @@ class DatabasePool {
 		if (! $this->pool->isEmpty ()) {
 			return $this->pool->dequeue ();
 		}
-		$this->dbs [$offset] = $db = new Database ( $this->dbConfig ['wrapper'] ?? \Ubiquity\db\providers\pdo\PDOWrapper::class, $this->dbConfig ['type'], $this->dbConfig ['dbName'], $this->dbConfig ['serverName'] ?? '127.0.0.1', $this->dbConfig ['port'] ?? 3306, $this->dbConfig ['user'] ?? 'root', $this->dbConfig ['password'] ?? '', $this->dbConfig ['options'] ?? [ ], $this->dbConfig ['cache'] ?? false);
+		$this->dbs [$offset] = new Database ( $this->dbConfig ['wrapper'] ?? \Ubiquity\db\providers\pdo\PDOWrapper::class, $this->dbConfig ['type'], $this->dbConfig ['dbName'], $this->dbConfig ['serverName'] ?? '127.0.0.1', $this->dbConfig ['port'] ?? 3306, $this->dbConfig ['user'] ?? 'root', $this->dbConfig ['password'] ?? '', $this->dbConfig ['options'] ?? [ ], $this->dbConfig ['cache'] ?? false);
 		try {
-			$db->connect ();
-			return $db;
+			$this->dbs [$offset]->connect ();
+			return $this->dbs [$offset];
 		} catch ( \Exception $e ) {
 			Logger::error ( "DAO", $e->getMessage () );
 			throw new DAOException ( $e->getMessage (), $e->getCode (), $e->getPrevious () );
