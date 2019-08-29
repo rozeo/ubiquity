@@ -12,6 +12,13 @@ class DatabasePool {
 	private $offset;
 	private $dbs = [ ];
 
+	private function getOffset() {
+		if (\class_exists ( '\\Swoole\\Coroutine' )) {
+			return $this->offset . \Swoole\Coroutine::getuid ();
+		}
+		return $this->offset;
+	}
+
 	public function __construct(&$config, $offset = null) {
 		$this->pool = new \SplQueue ();
 		$this->dbConfig = $offset ? ($config ['database'] [$offset] ?? ($config ['database'] ?? [ ])) : ($config ['database'] ['default'] ?? $config ['database']);
@@ -19,10 +26,7 @@ class DatabasePool {
 	}
 
 	public function put($db) {
-		$offset = $this->offset;
-		if (\class_exists ( '\\Swoole\\Coroutine' )) {
-			$offset .= \Swoole\Coroutine::getuid () ?? '';
-		}
+		$offset = $this->getOffset ();
 		if (isset ( $this->dbs [$offset] )) {
 			unset ( $this->dbs [$offset] );
 		}
@@ -30,10 +34,7 @@ class DatabasePool {
 	}
 
 	public function get() {
-		$offset = $this->offset;
-		if (\class_exists ( '\\Swoole\\Coroutine' )) {
-			$offset .= \Swoole\Coroutine::getuid () ?? '';
-		}
+		$offset = $this->getOffset ();
 		if (isset ( $this->dbs [$offset] )) {
 			return $this->dbs [$offset];
 		}
