@@ -40,12 +40,14 @@ class DAO {
 	public static $transformerOp = 'transform';
 	private static $conditionParsers = [ ];
 	protected static $modelsDatabase = [ ];
+	protected static $config;
 
 	protected static function getDb($model) {
 		return self::getDatabase ( self::$modelsDatabase [$model] ?? 'default');
 	}
 
 	public static function getPool(&$config, ?string $offset = null) {
+		self::$config = $config;
 		if (! isset ( self::$pools [$offset ?? 'default'] )) {
 			self::$pools [$offset ?? 'default'] = new DatabasePool ( $config, $offset );
 		}
@@ -330,7 +332,7 @@ class DAO {
 	 * @return \Ubiquity\db\Database
 	 */
 	public static function getDatabase($offset = 'default') {
-		$db = self::getPool ( Startup::$config, $offset )->get ();
+		$db = self::getPool ( self::$config, $offset )->get ();
 		SqlUtils::$quote = $db->quote;
 		return $db;
 	}
@@ -382,7 +384,7 @@ class DAO {
 	}
 
 	public static function freePool($db, $offset = 'default') {
-		$pool = self::getPool ( Startup::$config, $offset );
+		$pool = self::getPool ( self::$config, $offset );
 		$pool->put ( $db );
 	}
 }

@@ -10,6 +10,7 @@ class DatabasePool {
 	private $pool;
 	private $dbConfig;
 	private $offset;
+	private $dbs = [ ];
 
 	public function __construct(&$config, $offset = null) {
 		$this->pool = new \SplQueue ();
@@ -22,10 +23,17 @@ class DatabasePool {
 	}
 
 	public function get() {
+		$offset = $this->offset;
+		if (\class_exists ( '\\Swoole\\Coroutine' )) {
+			$offset .= \Swoole\Coroutine::getuid () ?? '';
+		}
+		if (isset ( $this->dbs [$offset] )) {
+			return $this->dbs [$offset];
+		}
 		if (! $this->pool->isEmpty ()) {
 			return $this->pool->dequeue ();
 		}
-		$db = new Database ( $this->dbConfig ['wrapper'] ?? \Ubiquity\db\providers\pdo\PDOWrapper::class, $this->dbConfig ['type'], $this->dbConfig ['dbName'], $this->dbConfig ['serverName'] ?? '127.0.0.1', $this->dbConfig ['port'] ?? 3306, $this->dbConfig ['user'] ?? 'root', $this->dbConfig ['password'] ?? '', $this->dbConfig ['options'] ?? [ ], $this->dbConfig ['cache'] ?? false);
+		$this->dbs [$offset] = $db = new Database ( $this->dbConfig ['wrapper'] ?? \Ubiquity\db\providers\pdo\PDOWrapper::class, $this->dbConfig ['type'], $this->dbConfig ['dbName'], $this->dbConfig ['serverName'] ?? '127.0.0.1', $this->dbConfig ['port'] ?? 3306, $this->dbConfig ['user'] ?? 'root', $this->dbConfig ['password'] ?? '', $this->dbConfig ['options'] ?? [ ], $this->dbConfig ['cache'] ?? false);
 		try {
 			$db->connect ();
 			return $db;
