@@ -70,7 +70,15 @@ class Startup {
 	 */
 	public static function run(array &$config): void {
 		self::init ( $config );
-		self::forward ( $_GET ['c'] );
+		self::forward ( self::resolveUri($_SERVER['REQUEST_URI']) );
+	}
+
+	/**
+	 * Parse uri
+	 */
+	public static function resolveUri(string $url)
+	{
+		return ltrim(urldecode(parse_url($url, PHP_URL_PATH)), '/');
 	}
 
 	/**
@@ -136,6 +144,7 @@ class Startup {
 	 */
 	public static function runAction(array &$u, $initialize = true, $finalize = true): void {
 		self::$controller = $ctrl = $u [0];
+		die($ctrl);
 		$uSize = \sizeof ( $u );
 		self::$action = $u [1] ?? 'index';
 		self::$actionParams = ($uSize > 2) ? \array_slice ( $u, 2 ) : [ ];

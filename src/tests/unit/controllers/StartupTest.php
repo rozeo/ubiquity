@@ -1,4 +1,5 @@
 <?php
+
 use Ubiquity\controllers\Startup;
 use Ubiquity\utils\http\USession;
 use Ubiquity\exceptions\RestException;
@@ -63,31 +64,31 @@ class StartupTest extends BaseTest {
 			$this->assertEquals ( 0, sizeof ( $this->startup->getActionParams () ) );
 		}, 'service init!Hello world!' );
 		// With routes
-		$_GET ["c"] = "route/test/index";
+		$_SERVER ["REQUEST_URI"] = "route/test/index";
 		$this->_assertDisplayEquals ( function () {
 			$this->startup->run ( $this->config );
 			$this->assertEquals ( TestControllerWithControl::class, $this->startup->getController () );
 			$this->assertEquals ( 'index', $this->startup->getAction () );
 		}, 'service init!initialize!-Hello world!-finalize!' );
-		$_GET ["c"] = "route/test/";
+		$_SERVER ["REQUEST_URI"] = "route/test/";
 		$this->_assertDisplayEquals ( function () {
 			$this->startup->run ( $this->config );
 			$this->assertEquals ( TestControllerWithControl::class, $this->startup->getController () );
 			$this->assertEquals ( 'index', $this->startup->getAction () );
 		}, 'initialize!-Hello world!-finalize!' );
-		$_GET ["c"] = "route/test";
+		$_SERVER ["REQUEST_URI"] = "route/test";
 		$this->_assertDisplayEquals ( function () {
 			$this->startup->run ( $this->config );
 			$this->assertEquals ( TestControllerWithControl::class, $this->startup->getController () );
 			$this->assertEquals ( 'index', $this->startup->getAction () );
 		}, 'initialize!-Hello world!-finalize!' );
-		$_GET ["c"] = "route/test/ctrl";
+		$_SERVER ["REQUEST_URI"] = "route/test/ctrl";
 		$this->_assertDisplayEquals ( function () {
 			$this->startup->run ( $this->config );
 			$this->assertEquals ( TestControllerWithControl::class, $this->startup->getController () );
 			$this->assertEquals ( 'actionWithControl', $this->startup->getAction () );
 		}, 'invalid!' );
-		$_GET ["c"] = "route/test/ctrl/";
+		$_SERVER ["REQUEST_URI"] = "route/test/ctrl/";
 		USession::set ( 'user', 'user' );
 		$this->_assertDisplayEquals ( function () {
 			$this->startup->run ( $this->config );
@@ -95,14 +96,14 @@ class StartupTest extends BaseTest {
 			$this->assertEquals ( 'actionWithControl', $this->startup->getAction () );
 		}, 'initialize!-authorized!-finalize!' );
 		// Route with params
-		$_GET ["c"] = "route/test/params/aa/bb";
+		$_SERVER ["REQUEST_URI"] = "route/test/params/aa/bb";
 		$this->_assertDisplayEquals ( function () {
 			$this->startup->run ( $this->config );
 			$this->assertEquals ( TestControllerWithControl::class, $this->startup->getController () );
 			$this->assertEquals ( 'withParams', $this->startup->getAction () );
 			$this->assertEquals ( [ 'aa','bb' ], $this->startup->getActionParams () );
 		}, 'initialize!-aa-bb!-finalize!' );
-		$_GET ["c"] = "route/test/params/aa/";
+		$_SERVER ["REQUEST_URI"] = "route/test/params/aa/";
 		$this->_assertDisplayEquals ( function () {
 			$this->startup->run ( $this->config );
 			$this->assertEquals ( TestControllerWithControl::class, $this->startup->getController () );
@@ -111,14 +112,14 @@ class StartupTest extends BaseTest {
 		}, 'initialize!-aa-default!-finalize!' );
 		// Rest
 		$this->_startServices ( 'rest' );
-		$_GET ["c"] = "rest/test";
+		$_SERVER ["REQUEST_URI"] = "rest/test";
 		$this->_assertDisplayEquals ( function () {
 			$this->startup->run ( $this->config );
 			$this->assertEquals ( TestRestController::class, $this->startup->getController () );
 			$this->assertEquals ( 'index', $this->startup->getAction () );
 			$this->assertEquals ( 0, sizeof ( $this->startup->getActionParams () ) );
 		}, 'service init!{"test":"ok"}' );
-		$_GET ["c"] = "rest/test/ticket";
+		$_SERVER ["REQUEST_URI"] = "rest/test/ticket";
 		$this->expectException ( RestException::class );
 		try {
 
@@ -181,7 +182,7 @@ class StartupTest extends BaseTest {
 	public function testGetControllerSimpleName() {
 		$this->startup->run ( $this->config );
 		$this->assertEquals ( 'TestController', $this->startup->getControllerSimpleName () );
-		$_GET ["c"] = "route/test/ctrl/";
+		$_SERVER ["REQUEST_URI"] = "route/test/ctrl/";
 		$this->startup->run ( $this->config );
 		$this->assertEquals ( 'TestControllerWithControl', $this->startup->getControllerSimpleName () );
 	}
@@ -199,7 +200,7 @@ class StartupTest extends BaseTest {
 	public function testGetAction() {
 		$this->startup->run ( $this->config );
 		$this->assertEquals ( 'index', $this->startup->getAction () );
-		$_GET ["c"] = "route/test/ctrl/";
+		$_SERVER ["REQUEST_URI"] = "route/test/ctrl/";
 		$this->startup->run ( $this->config );
 		$this->assertEquals ( 'actionWithControl', $this->startup->getAction () );
 	}
@@ -211,16 +212,16 @@ class StartupTest extends BaseTest {
 		$this->startup->run ( $this->config );
 		$this->assertEquals ( 0, sizeof ( $this->startup->getActionParams () ) );
 
-		$_GET ["c"] = "route/test/ctrl/";
+		$_SERVER ["REQUEST_URI"] = "route/test/ctrl/";
 		$this->startup->run ( $this->config );
 		$this->assertEquals ( 0, sizeof ( $this->startup->getActionParams () ) );
 
-		$_GET ["c"] = "/route/test/params/aa";
+		$_SERVER ["REQUEST_URI"] = "/route/test/params/aa";
 		$this->startup->run ( $this->config );
 		$this->assertEquals ( 1, sizeof ( $this->startup->getActionParams () ) );
 		$this->assertEquals ( 'aa', $this->startup->getActionParams () [0] );
 
-		$_GET ["c"] = "/route/test/params/aa/bb";
+		$_SERVER ["REQUEST_URI"] = "/route/test/params/aa/bb";
 		$this->startup->run ( $this->config );
 		$this->assertEquals ( 2, sizeof ( $this->startup->getActionParams () ) );
 		$this->assertEquals ( 'aa', $this->startup->getActionParams () [0] );
@@ -246,6 +247,13 @@ class StartupTest extends BaseTest {
 	 */
 	public function testGetApplicationName() {
 		$this->assertNotEmpty ( $this->startup->getApplicationName () );
+	}
+
+	public function testResolveUriCheck()
+	{
+		$uri = 'http://example.com/aaa/bbb/ccc/?d=123';
+		$validResult = '/aaa/bbb/ccc/';
+		$this->assertEqual($this->startup->resolveUri($uri), $validResult);
 	}
 }
 
